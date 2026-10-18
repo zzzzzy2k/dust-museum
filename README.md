@@ -1,56 +1,48 @@
-# Qoder Sites React starter
+# 吃灰台账 · dust-museum
 
-A React, TypeScript, Vite and Tailwind frontend with a bundled Shadcn component catalog. Vite produces static files in `dist/`. Server behavior belongs in the optional Qoder Sites Function, not a Node or framework server.
+本地优先的电子产品闲置记录工作台。记录每件设备的最后使用时间，自动计算吃灰天数、闲置价值与处置优先级。
 
-## Develop
+- 线上站点：<https://zzzzzy2k.github.io/dust-museum/>
+- GitHub 仓库：<https://github.com/zzzzzy2k/dust-museum>
 
-Use Node 22.12 or later in the 22.x series:
+## 功能
+
+- 设备新增、编辑、删除，记录类别、购买日期、价格、最后使用日和备注
+- “今天用了”一键更新最后使用日，吃灰天数按本地日期实时计算
+- 全部 / 活跃 / 吃灰 / 待处置筛选，按吃灰天数、价值或类别排序
+- 设备总数、吃灰设备数、吃灰总天数、闲置总价值、最久吃灰榜与类别分布
+- 类别与阈值设置、浅色 / 深色主题、JSON 备份导出
+- 数据保存在浏览器 `localStorage`，无需登录，不依赖服务端
+
+## 开发
+
+需要 Node 22.12+（22.x 系列）。
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Use the loopback URL printed by Vite. Edit `src/App.tsx`, `src/globals.css` and the title/description in `index.html`. Replace the sample page with the requested product before presenting a first meaningful preview. Import existing UI primitives from `@/components/ui/<component>` and compose them for the site's design. The neutral starter theme is a starting point, not the finished visual direction.
-
-For production output:
+生产构建与本地预览：
 
 ```sh
 npm run build
 npm run preview
 ```
 
-The build fixes `NODE_ENV=production` before loading Vite, independently of the terminal environment. It checks the frontend and bundled component types and emits `dist/index.html` and assets. `npm run preview` serves this output locally. Reuse passing checks while source is unchanged; no additional unit-test suite or browser QA is required by the template.
+## 目录
 
-## Optional Function
-
-The default page is entirely static and does not call a Function. For server behavior, adapt the public, credential-free example in `functions/handler.ts`. `functions/index.ts` is the Deno deployment entry point. With Deno installed, use a separate terminal:
-
-```sh
-npm run check:function
-npm run dev:function
+```text
+src/                应用源码（页面、组件、hooks、台账数据逻辑、样式）
+.github/workflows/  GitHub Pages 自动部署
+scripts/            构建与 Node 版本检查
+vendor/             随项目内置的样式文件及许可证
 ```
 
-The local service binds to `127.0.0.1:8000`; Vite development and built preview proxy `/functions/v1/app` to it, preserving the path. For example:
+## 部署
 
-```sh
-curl --fail 'http://127.0.0.1:5173/functions/v1/app?name=Visitor'
-```
+推送到 `main` 后，GitHub Actions 会执行 `npm ci` 和 `npm run build`，并将 `dist/` 发布到 GitHub Pages。站点使用相对资源路径，可直接部署在仓库子路径下。
 
-Use Vite's actual port if it differs. The same frontend request after deployment is routed by Qoder Sites. Local proxy configuration is not production routing. Keep local-only servers and fixtures in `dev/`, outside both publication directories. The included Function has no dependencies; add self-contained runtime imports as required. Frontend npm dependencies are not automatically installed in Functions.
+## 来源
 
-## Publish with Qoder Sites
-
-Open a local conversation in this project and follow the `sites-hosting` skill. Workspace registration is optional. Use the directory returned by `get_local_context` with:
-
-- `webDirectory: "dist"` after the build.
-- `spa: false` for the default single page; use `true` when adding client-side deep routes that need fallback.
-- `functionDirectory: "functions"` only if the application uses the Function. Omit it for static-only delivery.
-
-The Sites tools prepare artifacts and generate the publication descriptor; publish completed hosted work by default, unless the user explicitly requests a preview first or defers publication. Do not upload the project root, `node_modules`, `dev`, or source as the web artifact. A successful build or release does not prove an external integration works.
-
-For a database-backed React page, the installed `sites-building` Skill provides `assets/database-react/App.tsx` and a matching three-file database Function. Follow its `references/database.md` to connect the page, apply the reviewed schema and publish. These optional assets stay in the Skill rather than being copied into every static project.
-
-For database or Storage, follow the corresponding `sites-building` references and `sites-management` capability workflow. For AI, follow `sites-build-agent-app` and keep Cloud Agents access in the Function. Application credentials belong in server-side Sites Settings; frontend environment variables are public. This starter does not implement visitor login, database permissions, Cloud resource coordination or QCA sessions; add those only for the requested feature using the existing skills.
-
-See `PROVENANCE.md` and `vendor/` for source attribution and the preserved stylesheet license.
+项目基于 Qoder Sites React starter 与 Shadcn 样式资源构建，来源许可见 [PROVENANCE.md](PROVENANCE.md) 和 `vendor/`。
