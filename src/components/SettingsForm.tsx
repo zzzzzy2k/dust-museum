@@ -1,10 +1,16 @@
-import { useState, type FormEvent } from "react";
-import { Check, Download, Plus, Trash2 } from "lucide-react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { AlertTriangle, Check, Download, Plus, Trash2, Upload } from "lucide-react";
+import {
+  MAX_IMPORT_FILE_SIZE,
+  parseImportFile,
+  type ImportPlan,
+} from "@/lib/backup";
 import {
   MAX_IDLE_THRESHOLD,
   makeId,
   nextCategoryColor,
   type Category,
+  type LedgerStore,
   type Settings,
 } from "@/lib/ledger";
 import { Dialog } from "./Dialog";
@@ -12,9 +18,12 @@ import { Dialog } from "./Dialog";
 interface SettingsFormProps {
   settings: Settings;
   deviceCounts: Record<string, number>;
+  today: string;
   onClose: () => void;
   onSave: (settings: Settings) => void;
-  onExport: () => void;
+  onExportJson: () => void;
+  onExportCsv: () => void;
+  onImport: (store: LedgerStore) => void;
 }
 
 interface SettingsErrors {
@@ -26,9 +35,12 @@ interface SettingsErrors {
 export function SettingsForm({
   settings,
   deviceCounts,
+  today,
   onClose,
   onSave,
-  onExport,
+  onExportJson,
+  onExportCsv,
+  onImport,
 }: SettingsFormProps) {
   const [idleThreshold, setIdleThreshold] = useState(String(settings.idleThreshold));
   const [disposeThreshold, setDisposeThreshold] = useState(String(settings.disposeThreshold));
@@ -37,7 +49,11 @@ export function SettingsForm({
   );
   const [newCategory, setNewCategory] = useState("");
   const [errors, setErrors] = useState<SettingsErrors>({});
-  const [exported, setExported] = useState(false);
+  const [exportedFormat, setExportedFormat] = useState<"json" | "csv" | null>(null);
+  const [importPlan, setImportPlan] = useState<ImportPlan | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importConfirmed, setImportConfirmed] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const idleNumber = Number(idleThreshold);
   const disposeNumber = Number(disposeThreshold);
@@ -52,6 +68,49 @@ export function SettingsForm({
     disposeNumber >= 1 &&
     disposeNumber <= MAX_IDLE_THRESHOLD;
   const totalDevices = Object.values(deviceCounts).reduce((sum, count) => sum + count, 0);
+  const exportedAtLabel = importPlan?.exportedAt
+    ? (() => {
+        const date = new Date(importPlan.exportedAt);
+        return Number.isNaN(date.getTime())
+          ? importPlan.exportedAt
+          : date.toLocaleString("zh-CN", { hour12: false });
+      })()
+    : null;
+
+  const handleExport = (format: "json" | "csv") => {
+    if (format === "json") onExportJson();
+    else onExportCsv();
+    setExportedFormat(format);
+  };
+
+  const resetImport = () => {
+    setImportPlan(null);
+    setImportError(null);
+    setImportConfirmed(false);
+  };
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setImportPlan(null);
+    setImportConfirmed(false);
+    setImportError(null);
+
+    if (file.size > MAX_IMPORT_FILE_SIZE) {
+      setImportError("文件超过 2 MiB 上限，请选择更小的备份文件。");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const plan = parseImportFile(file.name, text, settings, totalDevices, today);
+      setImportPlan(plan);
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "读取备份文件失败。");
+    }
+  };
 
   const addCategory = (): boolean => {
     const trimmed = newCategory.trim();
@@ -304,34 +363,176 @@ export function SettingsForm({
             </div>
             <p className="settings-hint settings-hint-block">
               台账保存在当前浏览器，不会上传服务器。清除浏览器站点数据会丢失记录，
-              建议定期导出一份 JSON 备份。当前共 {totalDevices} 台设备。
+              建议定期导出 JSON 备份。当前共 {totalDevices} 台设备。
             </p>
-            <button
-              type="button"
-              className="btn btn-outline btn-compact"
-              onClick={() => {
-                onExport();
-                setExported(true);
-              }}
-            >
-              {exported ? (
-                <Check size={15} aria-hidden="true" />
-              ) : (
-                <Download size={15} aria-hidden="true" />
-              )}
-              {exported ? "备份已导出" : "导出 JSON 备份"}
-            </button>
+
+            <div className="data-actions">
+              <button
+                type="button"
+                className="btn btn-outline btn-compact"
+                onClick={() => handleExport("json")}
+              >
+                {exportedFormat === "json" ? (
+                  <Check size={15} aria-hidden="true" />
+                ) : (
+                  <Download size={15} aria-hidden="true" />
+                )}
+                {exportedFormat === "json" ? "JSON 已导出" : "导出 JSON 备份"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-compact"
+                onClick={() => handleExport("csv")}
+              >
+                {exportedFormat === "csv" ? (
+                  <Check size={15} aria-hidden="true" />
+                ) : (
+                  <Download size={15} aria-hidden="true" />
+                )}
+                {exportedFormat === "csv" ? "CSV 已导出" : "导出 CSV 表格"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-compact"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload size={15} aria-hidden="true" />
+                导入备份
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.csv,application/json,text/csv"
+                className="file-input-hidden"
+                onChange={handleFileChange}
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+            </div>
+            <p className="settings-hint">
+              JSON 是包含设备、类别和阈值的完整备份；CSV 是可编辑的设备表格。
+              两种格式都支持导入，单文件不超过 2 MiB。CSV 日期可用 -、/ 或 . 分隔，
+              导入后会统一转换为标准日期。
+            </p>
+
+            {importError ? (
+              <div className="import-error" role="alert">
+                {importError}
+              </div>
+            ) : null}
+
+            {importPlan ? (
+              <div className="import-preview">
+                <div className="import-preview-head">
+                  <div className="import-preview-title">
+                    <span className="import-format">
+                      {importPlan.format === "json" ? "JSON 完整备份" : "CSV 设备表"}
+                    </span>
+                    <p title={importPlan.fileName}>{importPlan.fileName}</p>
+                  </div>
+                  <span className="import-current">
+                    当前 {importPlan.currentDeviceCount} 台
+                  </span>
+                </div>
+
+                <dl className="import-summary">
+                  <div>
+                    <dt>导入设备</dt>
+                    <dd>{importPlan.deviceCount} 台</dd>
+                  </div>
+                  <div>
+                    <dt>{importPlan.format === "json" ? "导入类别" : "新增类别"}</dt>
+                    <dd>
+                      {importPlan.format === "json"
+                        ? `${importPlan.categoryCount} 类`
+                        : `${importPlan.newCategoryCount} 类`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{importPlan.format === "json" ? "吃灰阈值" : "保留阈值"}</dt>
+                    <dd>{importPlan.store.settings.idleThreshold} 天</dd>
+                  </div>
+                  {importPlan.format === "json" && exportedAtLabel ? (
+                    <div>
+                      <dt>备份时间</dt>
+                      <dd className="import-time">{exportedAtLabel}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+
+                <div className="import-warning" role="alert">
+                  <AlertTriangle size={17} aria-hidden="true" />
+                  <div>
+                    <strong>导入会覆盖当前数据，应用内无法撤销。</strong>
+                    <p>
+                      {importPlan.scope === "all"
+                        ? `将用备份替换当前 ${totalDevices} 台设备、全部类别和阈值设置。`
+                        : `将用表格替换当前 ${totalDevices} 台设备；保留当前类别和阈值${
+                            importPlan.newCategoryCount > 0
+                              ? `，并新增 ${importPlan.newCategoryCount} 个类别`
+                              : ""
+                          }。`}
+                    </p>
+                    <div className="import-backup-row">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-compact import-backup-button"
+                        onClick={() => handleExport("json")}
+                      >
+                        <Download size={14} aria-hidden="true" />
+                        先导出当前 JSON 备份
+                      </button>
+                      {exportedFormat === "json" ? (
+                        <span className="import-exported">
+                          <Check size={13} aria-hidden="true" />
+                          已导出
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <label className="import-check">
+                  <input
+                    type="checkbox"
+                    checked={importConfirmed}
+                    onChange={(event) => setImportConfirmed(event.target.checked)}
+                  />
+                  <span>我已了解导入会覆盖当前数据</span>
+                </label>
+
+                <div className="import-actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-compact"
+                    onClick={resetImport}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-compact"
+                    disabled={!importConfirmed}
+                    onClick={() => onImport(importPlan.store)}
+                  >
+                    确认导入
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
 
-        <footer className="modal-footer">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
-            取消
-          </button>
-          <button type="submit" className="btn btn-primary">
-            保存设置
-          </button>
-        </footer>
+        {importPlan ? null : (
+          <footer className="modal-footer">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              取消
+            </button>
+            <button type="submit" className="btn btn-primary">
+              保存设置
+            </button>
+          </footer>
+        )}
       </form>
     </Dialog>
   );

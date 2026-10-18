@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import {
+  MAX_PRICE,
   isValidDateISO,
   makeId,
   type Category,
@@ -21,6 +22,8 @@ interface FormErrors {
   lastUsedDate?: string;
   purchaseDate?: string;
   price?: string;
+  releaseDate?: string;
+  releasePrice?: string;
   note?: string;
 }
 
@@ -43,6 +46,12 @@ export function DeviceForm({
   const [purchaseDate, setPurchaseDate] = useState(device?.purchaseDate ?? "");
   const [price, setPrice] = useState(
     device?.price !== null && device?.price !== undefined ? String(device.price) : "",
+  );
+  const [releaseDate, setReleaseDate] = useState(device?.releaseDate ?? "");
+  const [releasePrice, setReleasePrice] = useState(
+    device?.releasePrice !== null && device?.releasePrice !== undefined
+      ? String(device.releasePrice)
+      : "",
   );
   const [note, setNote] = useState(device?.note ?? "");
   const [errors, setErrors] = useState<FormErrors>({});
@@ -87,10 +96,30 @@ export function DeviceForm({
       const numericPrice = Number(price);
       if (!Number.isFinite(numericPrice) || numericPrice < 0) {
         nextErrors.price = "请输入不小于 0 的价格。";
-      } else if (numericPrice > 100_000_000) {
+      } else if (numericPrice > MAX_PRICE) {
         nextErrors.price = "这个价格超出了台账的记录范围。";
       } else {
         parsedPrice = Math.round(numericPrice * 100) / 100;
+      }
+    }
+
+    if (releaseDate) {
+      if (!isValidDateISO(releaseDate)) {
+        nextErrors.releaseDate = "日期格式不正确。";
+      } else if (releaseDate > today) {
+        nextErrors.releaseDate = "上市日期不能晚于今天。";
+      }
+    }
+
+    let parsedReleasePrice: number | null = null;
+    if (releasePrice.trim()) {
+      const numericReleasePrice = Number(releasePrice);
+      if (!Number.isFinite(numericReleasePrice) || numericReleasePrice < 0) {
+        nextErrors.releasePrice = "请输入不小于 0 的价格。";
+      } else if (numericReleasePrice > MAX_PRICE) {
+        nextErrors.releasePrice = "这个价格超出了台账的记录范围。";
+      } else {
+        parsedReleasePrice = Math.round(numericReleasePrice * 100) / 100;
       }
     }
 
@@ -109,6 +138,8 @@ export function DeviceForm({
       categoryId,
       purchaseDate: purchaseDate || null,
       price: parsedPrice,
+      releaseDate: releaseDate || null,
+      releasePrice: parsedReleasePrice,
       lastUsedDate,
       note: trimmedNote,
       createdAt: device?.createdAt ?? new Date().toISOString(),
@@ -243,6 +274,60 @@ export function DeviceForm({
                 />
               </div>
               {errors.price ? <p className="field-error">{errors.price}</p> : null}
+            </div>
+
+            <div className="field">
+              <label className="field-label" htmlFor="device-release-date">
+                上市日期
+              </label>
+              <input
+                id="device-release-date"
+                className="text-input"
+                type="date"
+                value={releaseDate}
+                max={today}
+                onChange={(event) => {
+                  setReleaseDate(event.target.value);
+                  clearErrors();
+                }}
+                aria-invalid={Boolean(errors.releaseDate)}
+              />
+              {errors.releaseDate ? (
+                <p className="field-error">{errors.releaseDate}</p>
+              ) : (
+                <p className="field-hint">产品型号正式上市的日期。</p>
+              )}
+            </div>
+
+            <div className="field">
+              <label className="field-label" htmlFor="device-release-price">
+                上市价格
+              </label>
+              <div className="input-affix">
+                <span className="input-prefix" aria-hidden="true">
+                  ¥
+                </span>
+                <input
+                  id="device-release-price"
+                  className="text-input has-prefix num"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={releasePrice}
+                  onChange={(event) => {
+                    setReleasePrice(event.target.value);
+                    clearErrors();
+                  }}
+                  placeholder="官方上市价"
+                  aria-invalid={Boolean(errors.releasePrice)}
+                />
+              </div>
+              {errors.releasePrice ? (
+                <p className="field-error">{errors.releasePrice}</p>
+              ) : (
+                <p className="field-hint">官方上市价格，仅作参照。</p>
+              )}
             </div>
 
             <div className="field field-wide">

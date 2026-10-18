@@ -25,6 +25,7 @@ export function DeviceCard({
   onMarkUsed,
 }: DeviceCardProps) {
   const usedToday = entry.lastUsedDate === today;
+  const hasReleaseInfo = Boolean(entry.releaseDate) || entry.releasePrice !== null;
 
   return (
     <article className="device-card" data-status={entry.status}>
@@ -84,6 +85,21 @@ export function DeviceCard({
             {entry.price !== null ? `¥${formatMoney(entry.price)}` : "价格未记"}
           </span>
         </div>
+        {hasReleaseInfo ? (
+          <div className="device-release">
+            {entry.releaseDate ? (
+              <span>上市 {formatDate(entry.releaseDate)}</span>
+            ) : null}
+            {entry.releaseDate && entry.releasePrice !== null ? (
+              <span className="meta-sep" aria-hidden="true">
+                ·
+              </span>
+            ) : null}
+            {entry.releasePrice !== null ? (
+              <span className="num">上市价 ¥{formatMoney(entry.releasePrice)}</span>
+            ) : null}
+          </div>
+        ) : null}
         {entry.note ? (
           <p className="device-note" title={entry.note}>
             {entry.note}

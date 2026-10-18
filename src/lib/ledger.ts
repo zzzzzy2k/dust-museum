@@ -1,6 +1,6 @@
 export type Status = "active" | "idle" | "disposal";
 export type Filter = "all" | "active" | "idle" | "disposal";
-export type SortKey = "idle" | "value" | "category";
+export type SortKey = "idle" | "value" | "release" | "category";
 export type Theme = "light" | "dark";
 
 export interface Category {
@@ -15,6 +15,8 @@ export interface Device {
   categoryId: string;
   purchaseDate: string | null;
   price: number | null;
+  releaseDate: string | null;
+  releasePrice: number | null;
   lastUsedDate: string;
   note: string;
   createdAt: string;
@@ -51,6 +53,7 @@ export interface LedgerStats {
 export const STORAGE_KEY = "chixia-ledger.v1";
 export const THEME_KEY = "chixia-theme";
 export const MAX_IDLE_THRESHOLD = 3650;
+export const MAX_PRICE = 100_000_000;
 
 export const CATEGORY_COLORS = [
   "#7f8fa3",
@@ -122,6 +125,13 @@ function isoToDayNumber(value: string): number | null {
 
 export function isValidDateISO(value: string): boolean {
   return isoToDayNumber(value) !== null;
+}
+
+export function normalizeDateInput(value: string): string | null {
+  const match = /^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})$/.exec(value.trim());
+  if (!match) return null;
+  const iso = `${match[1]}-${pad(Number(match[2]))}-${pad(Number(match[3]))}`;
+  return isValidDateISO(iso) ? iso : null;
 }
 
 export function daysSince(lastUsedDate: string, today = todayISO()): number {
@@ -217,6 +227,12 @@ export function filterAndSort(
     } else if (sort === "category") {
       const categoryDiff = collator.compare(a.category.name, b.category.name);
       if (categoryDiff !== 0) return categoryDiff;
+    } else if (sort === "release") {
+      if (a.releaseDate !== b.releaseDate) {
+        if (!a.releaseDate) return 1;
+        if (!b.releaseDate) return -1;
+        return b.releaseDate.localeCompare(a.releaseDate);
+      }
     }
     const daysDiff = b.idleDays - a.idleDays;
     if (daysDiff !== 0) return daysDiff;
@@ -287,6 +303,8 @@ export function createSampleDevices(today = todayISO()): Device[] {
       categoryId: "media",
       purchaseDate: shiftISO(today, -1480),
       price: 998,
+      releaseDate: "2018-11-07",
+      releasePrice: 998,
       lastUsedDate: shiftISO(today, -412),
       note: "电池还健康，只是被手机替代了。",
       createdAt,
@@ -298,6 +316,8 @@ export function createSampleDevices(today = todayISO()): Device[] {
       categoryId: "media",
       purchaseDate: shiftISO(today, -1040),
       price: 1899,
+      releaseDate: "2020-08-06",
+      releasePrice: 2899,
       lastUsedDate: shiftISO(today, -137),
       note: "降噪依旧能打，考虑留作差旅备用。",
       createdAt,
@@ -309,6 +329,8 @@ export function createSampleDevices(today = todayISO()): Device[] {
       categoryId: "gaming",
       purchaseDate: shiftISO(today, -610),
       price: 2599,
+      releaseDate: "2021-10-08",
+      releasePrice: 2599,
       lastUsedDate: shiftISO(today, -6),
       note: "周末偶尔和朋友联机。",
       createdAt,
@@ -329,7 +351,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function normalizeCategory(raw: unknown): Category | null {
+export function normalizeCategory(raw: unknown): Category | null {
   if (!isRecord(raw)) return null;
   const id = typeof raw.id === "string" ? raw.id.trim() : "";
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
@@ -341,22 +363,26 @@ function normalizeCategory(raw: unknown): Category | null {
   return { id, name: name.slice(0, 20), color };
 }
 
-function normalizeDevice(raw: unknown): Device | null {
+export function normalizeDevice(raw: unknown): Device | null {
   if (!isRecord(raw)) return null;
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
   const lastUsedDate =
-    typeof raw.lastUsedDate === "string" && isValidDateISO(raw.lastUsedDate)
-      ? raw.lastUsedDate
-      : null;
+    typeof raw.lastUsedDate === "string" ? normalizeDateInput(raw.lastUsedDate) : null;
   if (!name || !lastUsedDate) return null;
 
   const purchaseDate =
-    typeof raw.purchaseDate === "string" && isValidDateISO(raw.purchaseDate)
-      ? raw.purchaseDate
-      : null;
+    typeof raw.purchaseDate === "string" ? normalizeDateInput(raw.purchaseDate) : null;
   const price =
     typeof raw.price === "number" && Number.isFinite(raw.price) && raw.price >= 0
       ? Math.round(raw.price * 100) / 100
+      : null;
+  const releaseDate =
+    typeof raw.releaseDate === "string" ? normalizeDateInput(raw.releaseDate) : null;
+  const releasePrice =
+    typeof raw.releasePrice === "number" &&
+    Number.isFinite(raw.releasePrice) &&
+    raw.releasePrice >= 0
+      ? Math.round(raw.releasePrice * 100) / 100
       : null;
 
   return {
@@ -365,6 +391,8 @@ function normalizeDevice(raw: unknown): Device | null {
     categoryId: typeof raw.categoryId === "string" ? raw.categoryId : "other",
     purchaseDate,
     price,
+    releaseDate,
+    releasePrice,
     lastUsedDate,
     note: typeof raw.note === "string" ? raw.note.slice(0, 200) : "",
     createdAt:

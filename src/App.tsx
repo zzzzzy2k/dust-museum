@@ -16,6 +16,7 @@ import { DeviceForm } from "@/components/DeviceForm";
 import { Dialog } from "@/components/Dialog";
 import { SettingsForm } from "@/components/SettingsForm";
 import { useToday } from "@/hooks/useToday";
+import { buildCsv } from "@/lib/backup";
 import {
   STORAGE_KEY,
   THEME_KEY,
@@ -50,6 +51,18 @@ const FILTER_META: Array<{ value: Filter; label: string; title: string }> = [
   { value: "idle", label: "吃灰", title: "包含待处置设备" },
   { value: "disposal", label: "待处置", title: "超过待处置阈值" },
 ];
+
+function downloadFile(content: string, type: string, fileName: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export default function App() {
   const [store, setStore] = useState<LedgerStore>(loadStore);
@@ -198,19 +211,29 @@ export default function App() {
     saveTheme(next);
   };
 
-  const handleExport = () => {
-    const blob = new Blob([buildBackup(store)], {
-      type: "application/json;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `吃灰台账-备份-${today}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast("备份已导出");
+  const handleExportJson = () => {
+    downloadFile(
+      buildBackup(store),
+      "application/json;charset=utf-8",
+      `吃灰台账-备份-${today}.json`,
+    );
+    showToast("JSON 备份已导出");
+  };
+
+  const handleExportCsv = () => {
+    downloadFile(
+      buildCsv(store.devices, store.settings.categories),
+      "text/csv;charset=utf-8",
+      `吃灰台账-设备表-${today}.csv`,
+    );
+    showToast("CSV 设备表已导出");
+  };
+
+  const handleImportStore = (nextStore: LedgerStore) => {
+    setStore(nextStore);
+    setFilter("all");
+    setSettingsOpen(false);
+    showToast(`已导入 ${nextStore.devices.length} 台设备`);
   };
 
   return (
@@ -305,6 +328,7 @@ export default function App() {
               >
                 <option value="idle">吃灰最久</option>
                 <option value="value">价值最高</option>
+                <option value="release">上市日期</option>
                 <option value="category">按类别</option>
               </select>
               <ChevronDown size={14} className="sort-chevron" aria-hidden="true" />
@@ -532,7 +556,7 @@ export default function App() {
           <span className="local-dot" aria-hidden="true" />
           台账保存在当前浏览器，刷新后仍会保留，不会上传服务器。
         </p>
-        <button type="button" className="link-btn footer-export" onClick={handleExport}>
+        <button type="button" className="link-btn footer-export" onClick={handleExportJson}>
           <Download size={14} aria-hidden="true" />
           导出备份
         </button>
@@ -552,9 +576,12 @@ export default function App() {
         <SettingsForm
           settings={store.settings}
           deviceCounts={categoryCounts}
+          today={today}
           onClose={() => setSettingsOpen(false)}
           onSave={handleSaveSettings}
-          onExport={handleExport}
+          onExportJson={handleExportJson}
+          onExportCsv={handleExportCsv}
+          onImport={handleImportStore}
         />
       ) : null}
 
