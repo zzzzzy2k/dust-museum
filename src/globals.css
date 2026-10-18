@@ -1913,6 +1913,106 @@ button:disabled {
   margin-top: 12px;
 }
 
+/* Usage guide */
+
+.help-body {
+  padding-top: 18px;
+}
+
+.help-lead {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.help-lead h3 {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.help-lead > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+
+.help-section {
+  padding: 12px 13px;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.help-index {
+  display: block;
+  color: var(--faint);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.help-section h4 {
+  margin: 5px 0 4px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.help-section p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+.help-note {
+  margin: 14px 0 2px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+@media (min-width: 761px) {
+  .help-lead h3 {
+    font-size: 18.5px;
+  }
+
+  .help-lead > p:last-child {
+    font-size: 13.5px;
+  }
+
+  .help-grid {
+    gap: 13px;
+  }
+
+  .help-section {
+    padding: 14px 15px;
+  }
+
+  .help-index {
+    font-size: 10.5px;
+  }
+
+  .help-section h4 {
+    font-size: 14px;
+  }
+
+  .help-section p {
+    font-size: 13px;
+  }
+
+  .help-note {
+    font-size: 12px;
+  }
+}
+
 /* Toast */
 
 .toast {
@@ -2023,6 +2123,11 @@ button:disabled {
   .toolbar {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .help-grid {
+    grid-template-columns: 1fr;
     gap: 10px;
   }
 
@@ -2183,12 +2288,42 @@ button:disabled {
 }
 
 @media (max-width: 380px) {
+  .site-header {
+    gap: 8px;
+  }
+
   .brand {
-    gap: 9px;
+    gap: 7px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .brand-mark svg {
+    width: 18px;
+    height: 18px;
   }
 
   .brand-copy h1 {
-    font-size: 17.5px;
+    font-size: 15.5px;
+  }
+
+  .header-actions {
+    gap: 3px;
+  }
+
+  .icon-btn {
+    width: 33px;
+    height: 33px;
+  }
+
+  .btn-add {
+    width: 33px;
+    height: 33px;
+    padding: 0;
   }
 
   .filter-tab {

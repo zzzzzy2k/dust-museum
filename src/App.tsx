@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   CircleCheck,
+  CircleHelp,
   Download,
   Moon,
   Plus,
@@ -15,6 +16,7 @@ import { DeviceCard } from "@/components/DeviceCard";
 import { DeviceForm } from "@/components/DeviceForm";
 import { Dialog } from "@/components/Dialog";
 import { SettingsForm } from "@/components/SettingsForm";
+import { UsageGuide } from "@/components/UsageGuide";
 import { useToday } from "@/hooks/useToday";
 import { buildCsv } from "@/lib/backup";
 import {
@@ -73,6 +75,7 @@ export default function App() {
   const [sortKey, setSortKey] = useState<SortKey>("idle");
   const [editor, setEditor] = useState<EditorState>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Device | null>(null);
   const [confirmClearSamples, setConfirmClearSamples] = useState(false);
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
@@ -252,6 +255,15 @@ export default function App() {
         </div>
 
         <div className="header-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setHelpOpen(true)}
+            aria-label="查看使用说明"
+            title="使用说明"
+          >
+            <CircleHelp size={18} aria-hidden="true" />
+          </button>
           <button
             type="button"
             className="icon-btn"
@@ -584,6 +596,8 @@ export default function App() {
           onImport={handleImportStore}
         />
       ) : null}
+
+      {helpOpen ? <UsageGuide onClose={() => setHelpOpen(false)} /> : null}
 
       {pendingDelete ? (
         <ConfirmDialog
