@@ -40,7 +40,7 @@ export function UsageGuide({ onClose }: { onClose: () => void }) {
             <span className="help-index num">04</span>
             <h4>数据与备份</h4>
             <p>
-              数据只保存在当前浏览器。JSON 是包含设备、类别和阈值的完整备份；CSV 是设备表格。导入会覆盖当前数据，请先导出 JSON 备份；CSV 日期支持 -、/、. 分隔。
+              数据只保存在当前浏览器。首页底部「导出表格」导出的是 CSV 设备表；含类别和阈值的完整 JSON 备份请在设置里导出。导入会覆盖当前数据，请先导出 JSON 备份；CSV 日期支持 -、/、. 分隔。
             </p>
           </section>
         </div>

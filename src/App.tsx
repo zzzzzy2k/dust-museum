@@ -568,9 +568,14 @@ export default function App() {
           <span className="local-dot" aria-hidden="true" />
           台账保存在当前浏览器，刷新后仍会保留，不会上传服务器。
         </p>
-        <button type="button" className="link-btn footer-export" onClick={handleExportJson}>
+        <button
+          type="button"
+          className="link-btn footer-export"
+          onClick={handleExportCsv}
+          title="导出 CSV 设备表；含类别与阈值的完整 JSON 备份请到设置里导出"
+        >
           <Download size={14} aria-hidden="true" />
-          导出备份
+          导出表格
         </button>
       </footer>
 
